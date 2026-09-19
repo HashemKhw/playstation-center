@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Screen {
+  id            String    @id @default(cuid())
+  name          String
+  consoleType   String    @default("PS5")
+  pricingRuleId String
+  active        Boolean   @default(true)
+  maintenance   Boolean   @default(false)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  pricingRule   PricingRule @relation(fields: [pricingRuleId], references: [id])
+  sessions      Session[]
+}
+
+model PricingRule {
+  id             String   @id @default(cuid())
+  name           String
+  billingMethod  String
+  hourlyRateFils Int
+  blocksJson     String   @default("[]")
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  screens        Screen[]
+  sessions       Session[]
+}
+
+model Product {
+  id            String         @id @default(cuid())
+  name          String
+  category      String         @default("General")
+  priceFils     Int
+  active        Boolean        @default(true)
+  stockQuantity Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  extras        SessionExtra[]
+}
+
+model Session {
+  id                     String         @id @default(cuid())
+  screenId               String
+  pricingRuleId          String
+  status                 String
+  billingMode            String
+  startTime              DateTime
+  endTime                DateTime?
+  plannedDurationSeconds Int?
+  pausedDurationSeconds  Int            @default(0)
+  actualDurationSeconds  Int?
+  pricingRuleName        String
+  billingMethod          String
+  hourlyRateFils         Int
+  blocksJson             String         @default("[]")
+  gamingCostFils         Int            @default(0)
+  extrasCostFils         Int            @default(0)
+  discountFils           Int            @default(0)
+  totalFils              Int            @default(0)
+  paymentStatus          String         @default("UNPAID")
+  notes                  String?
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  closedAt               DateTime?
+  screen                 Screen         @relation(fields: [screenId], references: [id])
+  pricingRule            PricingRule    @relation(fields: [pricingRuleId], references: [id])
+  extras                 SessionExtra[]
+  pauses                 SessionPause[]
+  payments               Payment[]
+  events                 ActivityEvent[]
+
+  @@index([screenId, status])
+  @@index([createdAt])
+  @@index([closedAt])
+}
+
+model SessionPause {
+  id        String    @id @default(cuid())
+  sessionId String
+  pausedAt  DateTime
+  resumedAt DateTime?
+  session   Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model SessionExtra {
+  id                  String   @id @default(cuid())
+  sessionId           String
+  productId           String?
+  productNameSnapshot String
+  unitPriceFils       Int
+  quantity            Int
+  totalFils           Int
+  createdAt           DateTime @default(now())
+  session             Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  product             Product? @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  sessionId     String   @unique
+  amountFils    Int
+  paymentMethod String
+  status        String
+  changeFils    Int      @default(0)
+  createdAt     DateTime @default(now())
+  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model PaymentMethodConfig {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  name      String
+  enabled   Boolean @default(true)
+  sortOrder Int     @default(0)
+}
+
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  sessionId   String?
+  type        String
+  payloadJson String   @default("{}")
+  createdAt   DateTime @default(now())
+  session     Session? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+}

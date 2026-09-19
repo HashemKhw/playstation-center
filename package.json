@@ -1,0 +1,93 @@
+{
+  "name": "playstation-center",
+  "private": true,
+  "type": "module",
+  "main": "desktop/main.cjs",
+  "version": "1.0.0",
+  "description": "Local-first PlayStation gaming center POS, session, and accounting system",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,ui -c cyan,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w client",
+    "desktop:bundle": "esbuild server/src/index.ts --bundle --platform=node --format=cjs --target=node20 --outfile=desktop/server-bundle.cjs --external:@prisma/client",
+    "desktop:prepare": "npm run build && node desktop/prepare-seed.mjs && npm run desktop:bundle",
+    "desktop:dev": "npm run desktop:prepare && electron .",
+    "desktop:folder": "npm run desktop:prepare && node desktop/prepare-signed-folder.mjs",
+    "desktop:build": "npm run desktop:folder",
+    "test": "npm run test -w shared && npm run test -w server",
+    "db:migrate": "npm run db:migrate -w server",
+    "db:seed": "npm run db:seed -w server",
+    "db:reset": "npm run db:reset -w server",
+    "lint": "eslint . && npm run lint -w shared && npm run lint -w server && npm run lint -w client",
+    "format": "prettier --write .",
+    "postinstall": "npm run db:deploy -w server && npm run db:seed -w server"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^44.0.0",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.9.1",
+    "prettier": "^3.5.3",
+    "typescript-eslint": "^8.68.0"
+  },
+  "overrides": {},
+  "build": {
+    "appId": "com.pscenter.nexusterminal",
+    "productName": "PlayStation Center",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/main.cjs",
+      "desktop/server-runner.cjs",
+      "desktop/server-bundle.cjs",
+      "client/dist/**/*",
+      "package.json",
+      "node_modules/@prisma/client/**/*",
+      "node_modules/.prisma/client/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/seed.sqlite",
+        "to": "seed.sqlite"
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/@prisma/client/**/*",
+      "node_modules/.prisma/client/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    }
+  }
+}
